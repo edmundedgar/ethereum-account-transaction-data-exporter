@@ -23,7 +23,7 @@ def process_accounts():
     for a in aliases_raw:
         aliases[a.lower()] = aliases_raw[a]
 
-    print(",".join(["txid", "fromacc", "fromacctype", "toacc", "toacctype", "val", "txcost", "tsstr", "exchange_rate", "txtype", "txcostjpy", "valjpy"]))
+    print(",".join(["tsstr", "txid", "fromacc", "fromacctype", "toacc", "toacctype", "val", "txcost", "exchange_rate", "txtype", "txcostjpy", "valjpy"]))
 
     for acc in accounts:
         # print (acc, accounts[acc])
@@ -49,6 +49,9 @@ def handle_account(acc, aliases):
     params['action'] = 'txlistinternal'
     resp = requests.get(url=url, params=params)
     data = resp.json() # Check the JSON Response Content documentation below
+    if data is None:
+        return
+
     for d in data['result']:
         crunch_result(d, aliases)
 
@@ -83,7 +86,7 @@ def crunch_result(d, aliases):
     exchange_rate = eth_jpy[tsdtstr]
     txcostjpy = (txcost * exchange_rate) / ETH_TO_WEI
     valjpy = (val * exchange_rate) / ETH_TO_WEI
-    print(",".join([txid, fromacc, fromacctype, toacc, toacctype, str(val), str(txcost), tsstr, str(exchange_rate), txtype, str(txcostjpy), str(valjpy)]))
+    print(",".join([tsstr, txid, fromacc, fromacctype, toacc, toacctype, str(val), str(txcost), str(exchange_rate), txtype, str(txcostjpy), str(valjpy)]))
 
 
 def load_jpy_data():
