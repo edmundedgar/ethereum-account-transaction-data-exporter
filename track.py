@@ -16,11 +16,20 @@ def process_accounts():
     with open('accounts.json') as json_data:
         accounts = json.load(json_data)
 
-    for acc in accounts:
-        print (acc, accounts[acc])
-        handle_account(acc, accounts[acc])
+    aliases = {}
+    with open('aliases.json') as json_data:
+        aliases_raw = json.load(json_data)
 
-def handle_account(acc, acctype):
+    for a in aliases_raw:
+        aliases[a.lower()] = aliases_raw[a]
+
+    print(",".join(["txid", "fromacc", "fromacctype", "toacc", "toacctype", "val", "txcost", "tsstr", "exchange_rate", "txtype", "txcostjpy", "valjpy"]))
+
+    for acc in accounts:
+        # print (acc, accounts[acc])
+        handle_account(acc, aliases)
+
+def handle_account(acc, aliases):
 
     url = 'http://api.etherscan.io/api'
     params = {
@@ -35,15 +44,16 @@ def handle_account(acc, acctype):
     resp = requests.get(url=url, params=params)
     data = resp.json() # Check the JSON Response Content documentation below
     for d in data['result']:
-        crunch_result(d, acctype)
+        crunch_result(d, aliases)
 
     params['action'] = 'txlistinternal'
     resp = requests.get(url=url, params=params)
     data = resp.json() # Check the JSON Response Content documentation below
     for d in data['result']:
-        crunch_result(d, acctype)
+        crunch_result(d, aliases)
 
-def crunch_result(d, acctype):
+def crunch_result(d, aliases):
+    
     if 'cumulativeGasUsed' in d:
         txcost = Decimal(d['cumulativeGasUsed']) * Decimal(d['gasPrice'])
         txtype = 'external'
@@ -52,6 +62,15 @@ def crunch_result(d, acctype):
         txtype = 'internal'
     toacc = d['to']
     fromacc = d['from']
+
+    toacctype = 'UNKNOWN'
+    if toacc.lower() in aliases:
+        toacctype = aliases[toacc.lower()]
+
+    fromacctype = 'UNKNOWN'
+    if fromacc.lower() in aliases:
+        fromacctype = aliases[fromacc.lower()]
+
     val = Decimal(d['value'])
     ts = d['timeStamp']
     tsval = datetime.datetime.fromtimestamp(int(ts))
@@ -64,7 +83,7 @@ def crunch_result(d, acctype):
     exchange_rate = eth_jpy[tsdtstr]
     txcostjpy = (txcost * exchange_rate) / ETH_TO_WEI
     valjpy = (val * exchange_rate) / ETH_TO_WEI
-    print(",".join([txid, fromacc, toacc, str(val), str(txcost), ts, tsstr, tsdtstr, str(exchange_rate), txtype, acctype, str(txcostjpy), str(valjpy)]))
+    print(",".join([txid, fromacc, fromacctype, toacc, toacctype, str(val), str(txcost), tsstr, str(exchange_rate), txtype, str(txcostjpy), str(valjpy)]))
 
 
 def load_jpy_data():
